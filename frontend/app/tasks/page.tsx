@@ -35,77 +35,27 @@ const initialColumns: Column[] = [
   {
     id: "todo",
     title: "To Do",
-    tasks: [
-      {
-        id: "1",
-        title: "Design task management dashboard",
-        priority: "No Priority",
-        status: "To Do",
-      },
-    ],
+    tasks: [],
   },
   {
     id: "doing",
     title: "Doing",
-    tasks: [
-      {
-        id: "2",
-        title: "Implement authentication",
-        priority: "No Priority",
-        dueDate: "20 Aug 2026",
-        status: "Doing",
-      },
-      {
-        id: "3",
-        title: "Write API",
-        priority: "Urgent",
-        dueDate: "13 Aug 2026",
-        status: "Doing",
-      },
-    ],
+    tasks: [],
   },
   {
     id: "completed",
     title: "Completed",
-    tasks: [
-      {
-        id: "4",
-        title: "Setup project",
-        priority: "Urgent",
-        dueDate: "12 Aug 2026",
-        status: "Completed",
-      },
-    ],
+    tasks: [],
   },
   {
     id: "on-hold",
     title: "On Hold",
-    tasks: [
-      {
-        id: "5",
-        title: "Review requirements",
-        priority: "No Priority",
-        status: "On Hold",
-      },
-    ],
+    tasks: [],
   },
   {
     id: "backlog",
     title: "Backlog",
-    tasks: [
-      {
-        id: "6",
-        title: "Add notifications",
-        priority: "No Priority",
-        status: "Backlog",
-      },
-      {
-        id: "7",
-        title: "Improve dashboard",
-        priority: "No Priority",
-        status: "Backlog",
-      },
-    ],
+    tasks: [],
   },
 ];
 
@@ -122,6 +72,10 @@ export default function TasksPage() {
   const [openTaskMenu, setOpenTaskMenu] = useState<string | null>(null);
   const [deletingTask, setDeletingTask] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [taskMenuPosition, setTaskMenuPosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -297,6 +251,60 @@ export default function TasksPage() {
       console.error("Error updating task:", error);
     }
   };
+
+  const changeTaskStatus = async (
+    taskId: string,
+    newStatus: Task["status"],
+  ) => {
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/tasks/${taskId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            status: newStatus,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update task status");
+      }
+
+      const updatedTask = await response.json();
+
+      const task: Task = {
+        id: updatedTask._id,
+        title: updatedTask.title,
+        description: updatedTask.description,
+        status: updatedTask.status,
+        priority: updatedTask.priority,
+        dueDate: updatedTask.dueDate,
+        assignee: updatedTask.assignee || "Guest User",
+        reporter: updatedTask.reporter || "Guest User",
+      };
+
+      setColumns((current) =>
+        current.map((column) => ({
+          ...column,
+          tasks:
+            column.title === task.status
+              ? [...column.tasks, task]
+              : column.tasks.filter(
+                  (existingTask) => existingTask.id !== task.id,
+                ),
+        })),
+      );
+
+      setOpenTaskMenu(null);
+    } catch (error) {
+      console.error("Error updating task status:", error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#f8f8f8] text-[#171717]">
       {/* Sidebar */}
@@ -458,7 +466,7 @@ export default function TasksPage() {
         </header>
 
         {/* Content */}
-        <section className="px-7 py-7">
+        <section className="px-7 py-7 overflow-visible">
           <div className="mb-7">
             <h1 className="text-[28px] font-semibold tracking-[-0.5px]">
               Tasks
@@ -466,7 +474,7 @@ export default function TasksPage() {
           </div>
 
           {/* Columns */}
-          <div className="flex gap-4 overflow-x-auto pb-6">
+          <div className="flex gap-4 overflow-x-auto overflow-y-visible pb-6">
             {columns.map((column) => (
               <div
                 key={column.id}
@@ -503,29 +511,83 @@ export default function TasksPage() {
 
                         <div className="relative">
                           <button
-                            onClick={() =>
-                              setOpenTaskMenu(
-                                openTaskMenu === task.id ? null : task.id,
-                              )
-                            }
+                            onClick={(e) => {
+                              if (openTaskMenu === task.id) {
+                                setOpenTaskMenu(null);
+                                setTaskMenuPosition(null);
+                                return;
+                              }
+
+                              const rect =
+                                e.currentTarget.getBoundingClientRect();
+
+                              setTaskMenuPosition({
+                                top: rect.bottom + 4,
+                                left: rect.right - 176,
+                              });
+
+                              setOpenTaskMenu(task.id);
+                            }}
                             className="shrink-0 rounded-md p-1 hover:bg-[#f3f3f3]"
                           >
                             <MoreHorizontal size={16} />
                           </button>
 
                           {openTaskMenu === task.id && (
-                            <div className="absolute right-0 top-8 z-30 w-36 rounded-lg border border-[#e5e5e5] bg-white p-1 shadow-lg">
+                            <div
+                              className="fixed z-50 w-44 rounded-lg border border-[#e5e5e5] bg-white p-1 shadow-lg"
+                              style={{
+                                top: taskMenuPosition?.top ?? 0,
+                                left: taskMenuPosition?.left ?? 0,
+                              }}
+                            >
                               <button
                                 onClick={() => {
                                   setEditingTask(task);
                                   setNewTaskTitle(task.title);
                                   setOpenTaskMenu(null);
+                                  setTaskMenuPosition(null);
                                   setShowAddTask(true);
                                 }}
                                 className="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-[#f5f5f5]"
                               >
                                 Edit
                               </button>
+
+                              <div className="my-1 border-t border-[#eeeeee]" />
+
+                              <p className="px-3 py-1.5 text-[11px] font-medium uppercase tracking-wide text-[#a3a3a3]">
+                                Change status
+                              </p>
+
+                              {(
+                                [
+                                  "To Do",
+                                  "Doing",
+                                  "Completed",
+                                  "On Hold",
+                                  "Backlog",
+                                ] as Task["status"][]
+                              ).map((status) => (
+                                <button
+                                  key={status}
+                                  disabled={task.status === status}
+                                  onClick={() => {
+                                    changeTaskStatus(task.id, status);
+                                    setOpenTaskMenu(null);
+                                    setTaskMenuPosition(null);
+                                  }}
+                                  className={`w-full rounded-md px-3 py-2 text-left text-sm ${
+                                    task.status === status
+                                      ? "cursor-default text-[#a3a3a3]"
+                                      : "hover:bg-[#f5f5f5]"
+                                  }`}
+                                >
+                                  {status}
+                                </button>
+                              ))}
+
+                              <div className="my-1 border-t border-[#eeeeee]" />
 
                               <button
                                 onClick={() => deleteTask(task.id)}
