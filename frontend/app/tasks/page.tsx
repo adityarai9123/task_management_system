@@ -37,9 +37,10 @@ const initialColumns: Column[] = [
     title: "To Do",
     tasks: [
       {
-        id: 1,
+        id: "1",
         title: "Design task management dashboard",
         priority: "No Priority",
+        status: "To Do",
       },
     ],
   },
@@ -48,16 +49,18 @@ const initialColumns: Column[] = [
     title: "Doing",
     tasks: [
       {
-        id: 2,
+        id: "2",
         title: "Implement authentication",
         priority: "No Priority",
         dueDate: "20 Aug 2026",
+        status: "Doing",
       },
       {
-        id: 3,
+        id: "3",
         title: "Write API",
         priority: "Urgent",
         dueDate: "13 Aug 2026",
+        status: "Doing",
       },
     ],
   },
@@ -66,10 +69,11 @@ const initialColumns: Column[] = [
     title: "Completed",
     tasks: [
       {
-        id: 4,
+        id: "4",
         title: "Setup project",
         priority: "Urgent",
         dueDate: "12 Aug 2026",
+        status: "Completed",
       },
     ],
   },
@@ -78,9 +82,10 @@ const initialColumns: Column[] = [
     title: "On Hold",
     tasks: [
       {
-        id: 5,
+        id: "5",
         title: "Review requirements",
         priority: "No Priority",
+        status: "On Hold",
       },
     ],
   },
@@ -89,14 +94,16 @@ const initialColumns: Column[] = [
     title: "Backlog",
     tasks: [
       {
-        id: 6,
+        id: "6",
         title: "Add notifications",
         priority: "No Priority",
+        status: "Backlog",
       },
       {
-        id: 7,
+        id: "7",
         title: "Improve dashboard",
         priority: "No Priority",
+        status: "Backlog",
       },
     ],
   },
@@ -112,53 +119,55 @@ export default function TasksPage() {
 
   const [newTaskTitle, setNewTaskTitle] = useState("");
 
+  const [openTaskMenu, setOpenTaskMenu] = useState<string | null>(null);
+  const [deletingTask, setDeletingTask] = useState<string | null>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+
   useEffect(() => {
-  const fetchTasks = async () => {
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/tasks`,
-      );
+    const fetchTasks = async () => {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/tasks`,
+        );
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch tasks");
+        if (!response.ok) {
+          throw new Error("Failed to fetch tasks");
+        }
+
+        const data = await response.json();
+
+        const tasks: Task[] = data.map((task: any) => ({
+          id: task._id,
+          title: task.title,
+          description: task.description,
+          status: task.status,
+          priority: task.priority,
+          dueDate: task.dueDate,
+          assignee: task.assignee || "Guest User",
+          reporter: task.reporter || "Guest User",
+        }));
+
+        const newColumns = initialColumns.map((column) => ({
+          ...column,
+          tasks: tasks.filter((task) => task.status === column.title),
+        }));
+
+        setColumns(newColumns);
+      } catch (error) {
+        console.error("Error fetching tasks:", error);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      const data = await response.json();
-
-      const tasks: Task[] = data.map((task: any) => ({
-        id: task._id,
-        title: task.title,
-        description: task.description,
-        status: task.status,
-        priority: task.priority,
-        dueDate: task.dueDate,
-        assignee: task.assignee || "Guest User",
-        reporter: task.reporter || "Guest User",
-      }));
-
-      const newColumns = initialColumns.map((column) => ({
-        ...column,
-        tasks: tasks.filter((task) => task.status === column.title),
-      }));
-
-      setColumns(newColumns);
-    } catch (error) {
-      console.error("Error fetching tasks:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  fetchTasks();
-}, []);
+    fetchTasks();
+  }, []);
 
   const addTask = async () => {
-  if (!newTaskTitle.trim()) return;
+    if (!newTaskTitle.trim()) return;
 
-  try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/tasks`,
-      {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tasks`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -171,44 +180,123 @@ export default function TasksPage() {
           assignee: "Guest User",
           reporter: "Guest User",
         }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create task");
       }
-    );
 
-    if (!response.ok) {
-      throw new Error("Failed to create task");
+      const createdTask = await response.json();
+
+      const task: Task = {
+        id: createdTask._id,
+        title: createdTask.title,
+        description: createdTask.description,
+        status: createdTask.status,
+        priority: createdTask.priority,
+        dueDate: createdTask.dueDate,
+        assignee: createdTask.assignee || "Guest User",
+        reporter: createdTask.reporter || "Guest User",
+      };
+
+      setColumns((current) =>
+        current.map((column) =>
+          column.title === task.status
+            ? {
+                ...column,
+                tasks: [...column.tasks, task],
+              }
+            : column,
+        ),
+      );
+
+      setNewTaskTitle("");
+      setShowAddTask(false);
+    } catch (error) {
+      console.error("Error creating task:", error);
     }
+  };
 
-    const createdTask = await response.json();
+  const deleteTask = async (taskId: string) => {
+    try {
+      setDeletingTask(taskId);
 
-    const task: Task = {
-      id: createdTask._id,
-      title: createdTask.title,
-      description: createdTask.description,
-      status: createdTask.status,
-      priority: createdTask.priority,
-      dueDate: createdTask.dueDate,
-      assignee: createdTask.assignee || "Guest User",
-      reporter: createdTask.reporter || "Guest User",
-    };
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/tasks/${taskId}`,
+        {
+          method: "DELETE",
+        },
+      );
 
-    setColumns((current) =>
-      current.map((column) =>
-        column.title === task.status
-          ? {
-              ...column,
-              tasks: [...column.tasks, task],
-            }
-          : column
-      )
-    );
+      if (!response.ok) {
+        throw new Error("Failed to delete task");
+      }
 
-    setNewTaskTitle("");
-    setShowAddTask(false);
-  } catch (error) {
-    console.error("Error creating task:", error);
-  }
-};
+      setColumns((current) =>
+        current.map((column) => ({
+          ...column,
+          tasks: column.tasks.filter((task) => task.id !== taskId),
+        })),
+      );
 
+      setOpenTaskMenu(null);
+    } catch (error) {
+      console.error("Error deleting task:", error);
+    } finally {
+      setDeletingTask(null);
+    }
+  };
+
+  const updateTask = async () => {
+    if (!editingTask || !newTaskTitle.trim()) return;
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/tasks/${editingTask.id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            title: newTaskTitle.trim(),
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update task");
+      }
+
+      const updatedTask = await response.json();
+
+      const task: Task = {
+        id: updatedTask._id,
+        title: updatedTask.title,
+        description: updatedTask.description,
+        status: updatedTask.status,
+        priority: updatedTask.priority,
+        dueDate: updatedTask.dueDate,
+        assignee: updatedTask.assignee || "Guest User",
+        reporter: updatedTask.reporter || "Guest User",
+      };
+
+      setColumns((current) =>
+        current.map((column) => ({
+          ...column,
+          tasks: column.tasks.map((existingTask) =>
+            existingTask.id === task.id ? task : existingTask,
+          ),
+        })),
+      );
+
+      setEditingTask(null);
+      setNewTaskTitle("");
+      setShowAddTask(false);
+    } catch (error) {
+      console.error("Error updating task:", error);
+    }
+  };
   return (
     <div className="min-h-screen bg-[#f8f8f8] text-[#171717]">
       {/* Sidebar */}
@@ -227,9 +315,7 @@ export default function TasksPage() {
 
               <div>
                 <p className="text-sm font-semibold">Guest User</p>
-                <p className="text-xs text-[#737373]">
-                  guest@pyramid.com
-                </p>
+                <p className="text-xs text-[#737373]">guest@pyramid.com</p>
               </div>
             </div>
 
@@ -300,24 +386,29 @@ export default function TasksPage() {
 
               {showFields && (
                 <div className="absolute right-0 top-12 z-40 w-56 rounded-xl border border-[#e5e5e5] bg-white p-2 shadow-lg">
-                  {["Priority", "Members", "Due Date", "Labels", "Status", "Reporter"].map(
-                    (field) => (
-                      <label
-                        key={field}
-                        className="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-sm hover:bg-[#f5f5f5]"
-                      >
-                        {field}
-                        <input
-                          type="checkbox"
-                          defaultChecked={
-                            field === "Priority" ||
-                            field === "Members" ||
-                            field === "Due Date"
-                          }
-                        />
-                      </label>
-                    )
-                  )}
+                  {[
+                    "Priority",
+                    "Members",
+                    "Due Date",
+                    "Labels",
+                    "Status",
+                    "Reporter",
+                  ].map((field) => (
+                    <label
+                      key={field}
+                      className="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-sm hover:bg-[#f5f5f5]"
+                    >
+                      {field}
+                      <input
+                        type="checkbox"
+                        defaultChecked={
+                          field === "Priority" ||
+                          field === "Members" ||
+                          field === "Due Date"
+                        }
+                      />
+                    </label>
+                  ))}
                 </div>
               )}
             </div>
@@ -410,9 +501,44 @@ export default function TasksPage() {
                           {task.title}
                         </p>
 
-                        <button className="shrink-0 rounded-md p-1 hover:bg-[#f3f3f3]">
-                          <MoreHorizontal size={16} />
-                        </button>
+                        <div className="relative">
+                          <button
+                            onClick={() =>
+                              setOpenTaskMenu(
+                                openTaskMenu === task.id ? null : task.id,
+                              )
+                            }
+                            className="shrink-0 rounded-md p-1 hover:bg-[#f3f3f3]"
+                          >
+                            <MoreHorizontal size={16} />
+                          </button>
+
+                          {openTaskMenu === task.id && (
+                            <div className="absolute right-0 top-8 z-30 w-36 rounded-lg border border-[#e5e5e5] bg-white p-1 shadow-lg">
+                              <button
+                                onClick={() => {
+                                  setEditingTask(task);
+                                  setNewTaskTitle(task.title);
+                                  setOpenTaskMenu(null);
+                                  setShowAddTask(true);
+                                }}
+                                className="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-[#f5f5f5]"
+                              >
+                                Edit
+                              </button>
+
+                              <button
+                                onClick={() => deleteTask(task.id)}
+                                disabled={deletingTask === task.id}
+                                className="w-full rounded-md px-3 py-2 text-left text-sm text-red-600 hover:bg-[#fef2f2] disabled:opacity-50"
+                              >
+                                {deletingTask === task.id
+                                  ? "Deleting..."
+                                  : "Delete"}
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       <div className="mt-4 flex items-center justify-between">
@@ -455,20 +581,22 @@ export default function TasksPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
           <div className="w-full max-w-[500px] rounded-2xl border border-[#e5e5e5] bg-white shadow-xl">
             <div className="border-b border-[#eeeeee] px-6 py-5">
-              <h2 className="text-lg font-semibold">Add Task</h2>
+              <h2 className="text-lg font-semibold">
+                {editingTask ? "Edit Task" : "Add Task"}
+              </h2>
             </div>
 
             <div className="p-6">
-              <label className="text-sm font-medium">
-                Title
-              </label>
+              <label className="text-sm font-medium">Title</label>
 
               <input
                 autoFocus
                 value={newTaskTitle}
                 onChange={(e) => setNewTaskTitle(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") addTask();
+                  if (e.key === "Enter") {
+                    editingTask ? updateTask() : addTask();
+                  }
                 }}
                 placeholder="What needs to be done?"
                 className="mt-2 w-full rounded-lg border border-[#d4d4d4] px-3 py-2.5 text-sm outline-none focus:border-[#171717]"
@@ -479,6 +607,7 @@ export default function TasksPage() {
                   onClick={() => {
                     setShowAddTask(false);
                     setNewTaskTitle("");
+                    setEditingTask(null);
                   }}
                   className="rounded-lg px-4 py-2.5 text-sm text-[#525252] hover:bg-[#f5f5f5]"
                 >
@@ -486,10 +615,10 @@ export default function TasksPage() {
                 </button>
 
                 <button
-                  onClick={addTask}
+                  onClick={editingTask ? updateTask : addTask}
                   className="rounded-lg bg-[#171717] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#2b2b2b]"
                 >
-                  Add Task
+                  {editingTask ? "Save Changes" : "Add Task"}
                 </button>
               </div>
             </div>
