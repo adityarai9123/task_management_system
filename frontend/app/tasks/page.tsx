@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { useEffect, useState } from "react";
+import ThemeToggle from "../components/themeToggle";
 
 interface Task {
   id: string;
@@ -21,6 +22,7 @@ interface Task {
   status: "To Do" | "Doing" | "Completed" | "On Hold" | "Backlog";
   priority: "No Priority" | "Low" | "Medium" | "High" | "Urgent";
   dueDate?: string;
+  labels?: string[];
   assignee?: string;
   reporter?: string;
 }
@@ -30,6 +32,8 @@ type Column = {
   title: string;
   tasks: Task[];
 };
+
+const availableLabels = ["Bug", "Feature", "Improvement", "Documentation"];
 
 const initialColumns: Column[] = [
   {
@@ -67,6 +71,7 @@ export default function TasksPage() {
   const [showFilter, setShowFilter] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
   const [newTaskPriority, setNewTaskPriority] =
     useState<Task["priority"]>("No Priority");
   const [showSearch, setShowSearch] = useState(false);
@@ -83,6 +88,8 @@ export default function TasksPage() {
   });
 
   const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskDueDate, setNewTaskDueDate] = useState("");
+  const [newTaskLabels, setNewTaskLabels] = useState<string[]>([]);
 
   const [openTaskMenu, setOpenTaskMenu] = useState<string | null>(null);
   const [deletingTask, setDeletingTask] = useState<string | null>(null);
@@ -112,6 +119,7 @@ export default function TasksPage() {
           status: task.status,
           priority: task.priority,
           dueDate: task.dueDate,
+          labels: task.labels || [],
           assignee: task.assignee || "Guest User",
           reporter: task.reporter || "Guest User",
         }));
@@ -146,6 +154,8 @@ export default function TasksPage() {
           description: "",
           status: "To Do",
           priority: newTaskPriority,
+          dueDate: newTaskDueDate || undefined,
+          labels: newTaskLabels,
           assignee: "Guest User",
           reporter: "Guest User",
         }),
@@ -164,6 +174,7 @@ export default function TasksPage() {
         status: createdTask.status,
         priority: createdTask.priority,
         dueDate: createdTask.dueDate,
+        labels: createdTask.labels || [],
         assignee: createdTask.assignee || "Guest User",
         reporter: createdTask.reporter || "Guest User",
       };
@@ -181,6 +192,8 @@ export default function TasksPage() {
 
       setNewTaskTitle("");
       setNewTaskPriority("No Priority");
+      setNewTaskDueDate("");
+      setNewTaskLabels([]);
       setShowAddTask(false);
     } catch (error) {
       console.error("Error creating task:", error);
@@ -230,6 +243,8 @@ export default function TasksPage() {
           },
           body: JSON.stringify({
             title: newTaskTitle.trim(),
+            dueDate: newTaskDueDate || undefined,
+            labels: newTaskLabels,
             priority: newTaskPriority,
           }),
         },
@@ -248,6 +263,7 @@ export default function TasksPage() {
         status: updatedTask.status,
         priority: updatedTask.priority,
         dueDate: updatedTask.dueDate,
+        labels: updatedTask.labels || [],
         assignee: updatedTask.assignee || "Guest User",
         reporter: updatedTask.reporter || "Guest User",
       };
@@ -264,6 +280,8 @@ export default function TasksPage() {
       setEditingTask(null);
       setNewTaskTitle("");
       setNewTaskPriority("No Priority");
+      setNewTaskDueDate("");
+      setNewTaskLabels([]);
       setShowAddTask(false);
     } catch (error) {
       console.error("Error updating task:", error);
@@ -323,17 +341,38 @@ export default function TasksPage() {
     }
   };
 
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+
+      if (
+        openTaskMenu &&
+        !target.closest("[data-task-menu]") &&
+        !target.closest("[data-task-menu-button]")
+      ) {
+        setOpenTaskMenu(null);
+        setTaskMenuPosition(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [openTaskMenu]);
+
   return (
-    <div className="min-h-screen bg-[#f8f8f8] text-[#171717]">
+    <div className="min-h-screen bg-[#f8f8f8] text-[#171717] dark:bg-[#171717] dark:text-[#ededed]">
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-30 h-screen border-r border-[#e5e5e5] bg-white transition-all duration-200 ${
+        className={`fixed left-0 top-0 z-30 h-screen border-r border-[#e5e5e5] bg-white dark:border-[#404040] dark:bg-[#1f1f1f] transition-all duration-200 ${
           sidebarOpen ? "w-[256px]" : "w-0 overflow-hidden"
         }`}
       >
         <div className="flex h-full flex-col">
           {/* User */}
-          <div className="flex items-center justify-between border-b border-[#eeeeee] px-5 py-5">
+          <div className="flex items-center justify-between border-b border-[#eeeeee] px-5 py-5 dark:border-[#404040]">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-pink-400 via-purple-500 to-blue-400 text-xs font-semibold text-white">
                 GU
@@ -341,7 +380,9 @@ export default function TasksPage() {
 
               <div>
                 <p className="text-sm font-semibold">Guest User</p>
-                <p className="text-xs text-[#737373]">guest@pyramid.com</p>
+                <p className="text-xs text-[#737373] dark:text-[#a3a3a3]">
+                  guest@pyramid.com
+                </p>
               </div>
             </div>
 
@@ -354,20 +395,20 @@ export default function TasksPage() {
               Workspace
             </p>
 
-            <button className="mt-3 flex w-full items-center gap-3 rounded-lg bg-[#f1f1f1] px-3 py-2.5 text-sm font-medium">
+            <button className="mt-3 flex w-full items-center gap-3 rounded-lg bg-[#f1f1f1] px-3 py-2.5 text-sm font-medium text-[#171717] dark:bg-[#333333] dark:text-[#ededed]">
               <SlidersHorizontal size={17} />
               Tasks
             </button>
 
-            <button className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-[#525252] hover:bg-[#f5f5f5]">
+            <button className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-[#525252] hover:bg-[#f5f5f5] dark:text-[#ededed] dark:hover:bg-[#333333]">
               <div className="h-4 w-4 rounded border border-[#737373]" />
               Projects
             </button>
           </div>
 
           {/* Bottom */}
-          <div className="mt-auto border-t border-[#eeeeee] p-3">
-            <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-[#525252] hover:bg-[#f5f5f5]">
+          <div className="mt-auto border-t border-[#eeeeee] p-3 dark:border-[#404040]">
+            <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-[#525252] hover:bg-[#f5f5f5] dark:text-[#ededed] dark:hover:bg-[#333333]">
               <Settings size={17} />
               Settings
             </button>
@@ -382,10 +423,10 @@ export default function TasksPage() {
         }`}
       >
         {/* Top bar */}
-        <header className="flex h-[72px] items-center border-b border-[#e5e5e5] bg-white px-7">
+        <header className="flex h-[72px] items-center border-b border-[#e5e5e5] bg-white px-7 dark:border-[#404040] dark:bg-[#1f1f1f]">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="mr-5 rounded-md p-2 hover:bg-[#f3f3f3]"
+            className="mr-5 rounded-md p-2 hover:bg-[#f3f3f3] dark:hover:bg-[#333333]"
           >
             {sidebarOpen ? (
               <ChevronLeft size={19} />
@@ -404,7 +445,7 @@ export default function TasksPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search tasks..."
-                  className="mr-2 w-52 rounded-lg border border-[#e5e5e5] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#171717]"
+                  className="mr-2 w-52 rounded-lg border border-[#e5e5e5] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#171717] dark:border-[#404040] dark:bg-[#2a2a2a] dark:text-[#ededed] dark:placeholder:text-[#a3a3a3]"
                 />
               )}
 
@@ -416,7 +457,7 @@ export default function TasksPage() {
                     setSearchQuery("");
                   }
                 }}
-                className="rounded-lg border border-[#e5e5e5] bg-white p-2.5 hover:bg-[#f5f5f5]"
+                className="rounded-lg border border-[#e5e5e5] bg-white p-2.5 text-[#171717] hover:bg-[#f5f5f5] dark:border-[#404040] dark:bg-[#1f1f1f] dark:text-[#ededed] dark:hover:bg-[#333333]"
               >
                 <Search size={18} />
               </button>
@@ -426,14 +467,14 @@ export default function TasksPage() {
             <div className="relative">
               <button
                 onClick={() => setShowFields(!showFields)}
-                className="flex items-center gap-2 rounded-lg border border-[#e5e5e5] bg-white px-4 py-2.5 text-sm font-medium hover:bg-[#f5f5f5]"
+                className="flex items-center gap-2 rounded-lg border border-[#e5e5e5] bg-white px-4 py-2.5 text-sm font-medium text-[#171717] hover:bg-[#f5f5f5] dark:border-[#404040] dark:bg-[#1f1f1f] dark:text-[#ededed] dark:hover:bg-[#333333]"
               >
                 <SlidersHorizontal size={16} />
                 Fields
               </button>
 
               {showFields && (
-                <div className="absolute right-0 top-12 z-40 w-56 rounded-xl border border-[#e5e5e5] bg-white p-2 shadow-lg">
+                <div className="absolute right-0 top-12 z-40 w-56 rounded-xl border border-[#e5e5e5] bg-white p-2 text-[#171717] shadow-lg dark:border-[#404040] dark:bg-[#2a2a2a] dark:text-[#ededed]">
                   {[
                     "Priority",
                     "Members",
@@ -444,7 +485,7 @@ export default function TasksPage() {
                   ].map((field) => (
                     <label
                       key={field}
-                      className="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-sm hover:bg-[#f5f5f5]"
+                      className="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-sm hover:bg-[#f5f5f5] dark:hover:bg-[#333333]"
                     >
                       {field}
 
@@ -495,13 +536,13 @@ export default function TasksPage() {
             <div className="relative">
               <button
                 onClick={() => setShowFilter(!showFilter)}
-                className="rounded-lg border border-[#e5e5e5] bg-white p-2.5 hover:bg-[#f5f5f5]"
+                className="rounded-lg border border-[#e5e5e5] bg-white p-2.5 text-[#171717] hover:bg-[#f5f5f5] dark:border-[#404040] dark:bg-[#1f1f1f] dark:text-[#ededed] dark:hover:bg-[#333333]"
               >
                 <Filter size={18} />
               </button>
 
               {showFilter && (
-                <div className="absolute right-0 top-12 z-40 w-64 rounded-xl border border-[#e5e5e5] bg-white p-4 shadow-lg">
+                <div className="absolute right-0 top-12 z-40 w-64 rounded-xl border border-[#e5e5e5] bg-white p-4 text-[#171717] shadow-lg dark:border-[#404040] dark:bg-[#2a2a2a] dark:text-[#ededed]">
                   <p className="text-sm font-semibold">Filter tasks</p>
 
                   <div className="mt-4">
@@ -512,7 +553,7 @@ export default function TasksPage() {
                     <select
                       value={filterPriority}
                       onChange={(e) => setFilterPriority(e.target.value)}
-                      className="mt-1.5 w-full rounded-lg border border-[#e5e5e5] bg-white px-3 py-2 text-sm outline-none"
+                      className="mt-1.5 w-full rounded-lg border border-[#e5e5e5] bg-white px-3 py-2 text-sm text-[#171717] outline-none dark:border-[#404040] dark:bg-[#1f1f1f] dark:text-[#ededed]"
                     >
                       <option value="All">All priorities</option>
                       <option value="No Priority">No Priority</option>
@@ -531,7 +572,7 @@ export default function TasksPage() {
                     <select
                       value={filterAssignee}
                       onChange={(e) => setFilterAssignee(e.target.value)}
-                      className="mt-1.5 w-full rounded-lg border border-[#e5e5e5] bg-white px-3 py-2 text-sm outline-none"
+                      className="mt-1.5 w-full rounded-lg border border-[#e5e5e5] bg-white px-3 py-2 text-sm text-[#171717] outline-none dark:border-[#404040] dark:bg-[#1f1f1f] dark:text-[#ededed]"
                     >
                       <option value="All">All members</option>
                       <option value="Guest User">Guest User</option>
@@ -543,13 +584,16 @@ export default function TasksPage() {
                       setFilterPriority("All");
                       setFilterAssignee("All");
                     }}
-                    className="mt-4 w-full rounded-lg border border-[#e5e5e5] px-3 py-2 text-sm hover:bg-[#f5f5f5]"
+                    className="mt-4 w-full rounded-lg border border-[#e5e5e5] px-3 py-2 text-sm hover:bg-[#f5f5f5] dark:hover:bg-[#333333]"
                   >
                     Clear filters
                   </button>
                 </div>
               )}
             </div>
+
+            {/* Theme */}
+            <ThemeToggle />
 
             {/* Add Task */}
             <button
@@ -575,7 +619,7 @@ export default function TasksPage() {
             {columns.map((column) => (
               <div
                 key={column.id}
-                className="w-[300px] min-w-[300px] rounded-xl border border-[#e5e5e5] bg-[#f3f3f3] p-3"
+                className="w-[300px] min-w-[300px] rounded-xl border border-[#e5e5e5] bg-[#f3f3f3] p-3 dark:border-[#404040] dark:bg-[#242424]"
               >
                 {/* Column heading */}
                 <div className="mb-3 flex items-center justify-between px-1">
@@ -615,7 +659,7 @@ export default function TasksPage() {
                     .map((task) => (
                       <div
                         key={task.id}
-                        className="rounded-xl border border-[#e5e5e5] bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+                        className="rounded-xl border border-[#e5e5e5] bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)] dark:border-[#404040] dark:bg-[#2a2a2a]"
                       >
                         {/* Task title + menu */}
                         <div className="flex items-start justify-between gap-3">
@@ -625,6 +669,7 @@ export default function TasksPage() {
 
                           <div className="relative">
                             <button
+                              data-task-menu-button
                               onClick={(e) => {
                                 if (openTaskMenu === task.id) {
                                   setOpenTaskMenu(null);
@@ -656,7 +701,8 @@ export default function TasksPage() {
 
                             {openTaskMenu === task.id && (
                               <div
-                                className="fixed z-50 w-44 rounded-lg border border-[#e5e5e5] bg-white p-1 shadow-lg"
+                                data-task-menu
+                                className="fixed z-50 w-44 rounded-lg border border-[#e5e5e5] bg-white p-1 text-[#171717] shadow-lg dark:border-[#404040] dark:bg-[#2a2a2a] dark:text-[#ededed]"
                                 style={{
                                   top: taskMenuPosition?.top ?? 0,
                                   left: taskMenuPosition?.left ?? 0,
@@ -667,16 +713,18 @@ export default function TasksPage() {
                                     setEditingTask(task);
                                     setNewTaskTitle(task.title);
                                     setNewTaskPriority(task.priority);
+                                    setNewTaskDueDate(task.dueDate || "");
+                                    setNewTaskLabels(task.labels || []);
                                     setOpenTaskMenu(null);
                                     setTaskMenuPosition(null);
                                     setShowAddTask(true);
                                   }}
-                                  className="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-[#f5f5f5]"
+                                  className="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-[#f5f5f5] dark:hover:bg-[#333333]"
                                 >
                                   Edit
                                 </button>
 
-                                <div className="my-1 border-t border-[#eeeeee]" />
+                                <div className="my-1 border-t border-[#eeeeee] dark:border-[#404040]" />
 
                                 <p className="px-3 py-1.5 text-[11px] font-medium uppercase tracking-wide text-[#a3a3a3]">
                                   Change status
@@ -702,14 +750,14 @@ export default function TasksPage() {
                                     className={`w-full rounded-md px-3 py-2 text-left text-sm ${
                                       task.status === status
                                         ? "cursor-default text-[#a3a3a3]"
-                                        : "hover:bg-[#f5f5f5]"
+                                        : "hover:bg-[#f5f5f5] dark:hover:bg-[#333333]"
                                     }`}
                                   >
                                     {status}
                                   </button>
                                 ))}
 
-                                <div className="my-1 border-t border-[#eeeeee]" />
+                                <div className="my-1 border-t border-[#eeeeee] dark:border-[#404040]" />
 
                                 <button
                                   onClick={() => deleteTask(task.id)}
@@ -727,22 +775,37 @@ export default function TasksPage() {
 
                         {/* Optional task fields */}
                         {visibleFields.priority && (
-                          <div className="mt-2 text-xs text-[#737373]">
+                          <div className="mt-2 text-xs text-[#737373] dark:text-[#a3a3a3]">
                             Priority: {task.priority}
                           </div>
                         )}
 
                         {visibleFields.status && (
-                          <div className="mt-1 text-xs text-[#737373]">
+                          <div className="mt-1 text-xs text-[#737373] dark:text-[#a3a3a3]">
                             Status: {task.status}
                           </div>
                         )}
 
                         {visibleFields.reporter && (
-                          <div className="mt-1 text-xs text-[#737373]">
+                          <div className="text-xs text-[#737373] dark:text-[#a3a3a3]">
                             Reporter: {task.reporter || "Guest User"}
                           </div>
                         )}
+
+                        {visibleFields.labels &&
+                          task.labels &&
+                          task.labels.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {task.labels.map((label) => (
+                                <span
+                                  key={label}
+                                  className="rounded-full bg-[#f3f3f3] px-2.5 py-1 text-[11px] font-medium text-[#525252] dark:bg-[#333333] dark:text-[#d4d4d4]"
+                                >
+                                  {label}
+                                </span>
+                              ))}
+                            </div>
+                          )}
 
                         {/* Assignee + Due Date */}
                         {(visibleFields.members ||
@@ -790,7 +853,7 @@ export default function TasksPage() {
       {/* Add Task Modal */}
       {showAddTask && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
-          <div className="w-full max-w-[500px] rounded-2xl border border-[#e5e5e5] bg-white shadow-xl">
+          <div className="w-full max-w-[500px] rounded-2xl border border-[#e5e5e5] bg-white text-[#171717] shadow-xl dark:border-[#404040] dark:bg-[#2a2a2a] dark:text-[#ededed]">
             <div className="border-b border-[#eeeeee] px-6 py-5">
               <h2 className="text-lg font-semibold">
                 {editingTask ? "Edit Task" : "Add Task"}
@@ -810,8 +873,50 @@ export default function TasksPage() {
                   }
                 }}
                 placeholder="What needs to be done?"
-                className="mt-2 w-full rounded-lg border border-[#d4d4d4] px-3 py-2.5 text-sm outline-none focus:border-[#171717]"
+                className="mt-2 w-full rounded-lg border border-[#d4d4d4] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#171717] dark:border-[#404040] dark:bg-[#1f1f1f] dark:text-[#ededed] dark:placeholder:text-[#a3a3a3]"
               />
+
+              <div className="mt-5">
+                <label className="text-sm font-medium">Due Date</label>
+
+                <input
+                  type="date"
+                  value={newTaskDueDate}
+                  onChange={(e) => setNewTaskDueDate(e.target.value)}
+                  className="mt-2 w-full rounded-lg border border-[#d4d4d4] bg-white px-3 py-2.5 text-sm text-[#171717] outline-none focus:border-[#171717] dark:border-[#404040] dark:bg-[#1f1f1f] dark:text-[#ededed]"
+                />
+              </div>
+
+              <div className="mt-5">
+                <label className="text-sm font-medium">Labels</label>
+
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {availableLabels.map((label) => {
+                    const selected = newTaskLabels.includes(label);
+
+                    return (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => {
+                          setNewTaskLabels((current) =>
+                            current.includes(label)
+                              ? current.filter((item) => item !== label)
+                              : [...current, label],
+                          );
+                        }}
+                        className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                          selected
+                            ? "border-[#171717] bg-[#171717] text-white dark:border-white dark:bg-white dark:text-[#171717]"
+                            : "border-[#d4d4d4] bg-white text-[#525252] hover:bg-[#f5f5f5] dark:border-[#404040] dark:bg-[#1f1f1f] dark:text-[#d4d4d4] dark:hover:bg-[#333333]"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
               <div className="mt-5">
                 <label className="text-sm font-medium">Priority</label>
@@ -821,7 +926,7 @@ export default function TasksPage() {
                   onChange={(e) =>
                     setNewTaskPriority(e.target.value as Task["priority"])
                   }
-                  className="mt-2 w-full rounded-lg border border-[#d4d4d4] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#171717]"
+                  className="mt-2 w-full rounded-lg border border-[#d4d4d4] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#171717] dark:border-[#404040] dark:bg-[#2a2a2a] dark:text-[#ededed]"
                 >
                   <option value="No Priority">No Priority</option>
                   <option value="Low">Low</option>
@@ -837,9 +942,11 @@ export default function TasksPage() {
                     setShowAddTask(false);
                     setNewTaskTitle("");
                     setNewTaskPriority("No Priority");
+                    setNewTaskDueDate("");
+                    setNewTaskLabels([]);
                     setEditingTask(null);
                   }}
-                  className="rounded-lg px-4 py-2.5 text-sm text-[#525252] hover:bg-[#f5f5f5]"
+                  className="rounded-lg px-4 py-2.5 text-sm text-[#525252] hover:bg-[#f5f5f5] dark:hover:bg-[#333333] "
                 >
                   Cancel
                 </button>

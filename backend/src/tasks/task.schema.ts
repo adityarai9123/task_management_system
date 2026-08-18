@@ -26,6 +26,9 @@ export class Task {
   @Prop()
   dueDate?: string;
 
+  @Prop({ type: [String], default: [] })
+  labels!: string[];
+
   @Prop({ default: 'Guest User' })
   assignee!: string;
 
