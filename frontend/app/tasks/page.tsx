@@ -66,6 +66,21 @@ export default function TasksPage() {
   const [showFields, setShowFields] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [newTaskPriority, setNewTaskPriority] =
+    useState<Task["priority"]>("No Priority");
+  const [showSearch, setShowSearch] = useState(false);
+  const [filterPriority, setFilterPriority] = useState<string>("All");
+  const [filterAssignee, setFilterAssignee] = useState<string>("All");
+
+  const [visibleFields, setVisibleFields] = useState({
+    priority: true,
+    members: true,
+    dueDate: true,
+    labels: false,
+    status: false,
+    reporter: false,
+  });
 
   const [newTaskTitle, setNewTaskTitle] = useState("");
 
@@ -130,7 +145,7 @@ export default function TasksPage() {
           title: newTaskTitle.trim(),
           description: "",
           status: "To Do",
-          priority: "No Priority",
+          priority: newTaskPriority,
           assignee: "Guest User",
           reporter: "Guest User",
         }),
@@ -165,6 +180,7 @@ export default function TasksPage() {
       );
 
       setNewTaskTitle("");
+      setNewTaskPriority("No Priority");
       setShowAddTask(false);
     } catch (error) {
       console.error("Error creating task:", error);
@@ -214,6 +230,7 @@ export default function TasksPage() {
           },
           body: JSON.stringify({
             title: newTaskTitle.trim(),
+            priority: newTaskPriority,
           }),
         },
       );
@@ -246,6 +263,7 @@ export default function TasksPage() {
 
       setEditingTask(null);
       setNewTaskTitle("");
+      setNewTaskPriority("No Priority");
       setShowAddTask(false);
     } catch (error) {
       console.error("Error updating task:", error);
@@ -378,9 +396,31 @@ export default function TasksPage() {
 
           <div className="ml-auto flex items-center gap-2">
             {/* Search */}
-            <button className="rounded-lg border border-[#e5e5e5] bg-white p-2.5 hover:bg-[#f5f5f5]">
-              <Search size={18} />
-            </button>
+
+            <div className="relative flex items-center">
+              {showSearch && (
+                <input
+                  autoFocus
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search tasks..."
+                  className="mr-2 w-52 rounded-lg border border-[#e5e5e5] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#171717]"
+                />
+              )}
+
+              <button
+                onClick={() => {
+                  setShowSearch(!showSearch);
+
+                  if (showSearch) {
+                    setSearchQuery("");
+                  }
+                }}
+                className="rounded-lg border border-[#e5e5e5] bg-white p-2.5 hover:bg-[#f5f5f5]"
+              >
+                <Search size={18} />
+              </button>
+            </div>
 
             {/* Fields */}
             <div className="relative">
@@ -407,13 +447,43 @@ export default function TasksPage() {
                       className="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-sm hover:bg-[#f5f5f5]"
                     >
                       {field}
+
                       <input
                         type="checkbox"
-                        defaultChecked={
-                          field === "Priority" ||
-                          field === "Members" ||
-                          field === "Due Date"
+                        checked={
+                          visibleFields[
+                            field === "Priority"
+                              ? "priority"
+                              : field === "Members"
+                                ? "members"
+                                : field === "Due Date"
+                                  ? "dueDate"
+                                  : field === "Labels"
+                                    ? "labels"
+                                    : field === "Status"
+                                      ? "status"
+                                      : "reporter"
+                          ]
                         }
+                        onChange={() => {
+                          const key =
+                            field === "Priority"
+                              ? "priority"
+                              : field === "Members"
+                                ? "members"
+                                : field === "Due Date"
+                                  ? "dueDate"
+                                  : field === "Labels"
+                                    ? "labels"
+                                    : field === "Status"
+                                      ? "status"
+                                      : "reporter";
+
+                          setVisibleFields((current) => ({
+                            ...current,
+                            [key]: !current[key],
+                          }));
+                        }}
                       />
                     </label>
                   ))}
@@ -434,22 +504,49 @@ export default function TasksPage() {
                 <div className="absolute right-0 top-12 z-40 w-64 rounded-xl border border-[#e5e5e5] bg-white p-4 shadow-lg">
                   <p className="text-sm font-semibold">Filter tasks</p>
 
-                  <div className="mt-3 space-y-2">
-                    <label className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" />
-                      Urgent
+                  <div className="mt-4">
+                    <label className="text-xs font-medium text-[#737373]">
+                      Priority
                     </label>
 
-                    <label className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" />
-                      Has due date
-                    </label>
-
-                    <label className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" />
-                      Assigned to me
-                    </label>
+                    <select
+                      value={filterPriority}
+                      onChange={(e) => setFilterPriority(e.target.value)}
+                      className="mt-1.5 w-full rounded-lg border border-[#e5e5e5] bg-white px-3 py-2 text-sm outline-none"
+                    >
+                      <option value="All">All priorities</option>
+                      <option value="No Priority">No Priority</option>
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                      <option value="Urgent">Urgent</option>
+                    </select>
                   </div>
+
+                  <div className="mt-4">
+                    <label className="text-xs font-medium text-[#737373]">
+                      Assignee
+                    </label>
+
+                    <select
+                      value={filterAssignee}
+                      onChange={(e) => setFilterAssignee(e.target.value)}
+                      className="mt-1.5 w-full rounded-lg border border-[#e5e5e5] bg-white px-3 py-2 text-sm outline-none"
+                    >
+                      <option value="All">All members</option>
+                      <option value="Guest User">Guest User</option>
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setFilterPriority("All");
+                      setFilterAssignee("All");
+                    }}
+                    className="mt-4 w-full rounded-lg border border-[#e5e5e5] px-3 py-2 text-sm hover:bg-[#f5f5f5]"
+                  >
+                    Clear filters
+                  </button>
                 </div>
               )}
             </div>
@@ -499,130 +596,182 @@ export default function TasksPage() {
 
                 {/* Tasks */}
                 <div className="space-y-2.5">
-                  {column.tasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="rounded-xl border border-[#e5e5e5] bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="text-sm font-medium leading-5">
-                          {task.title}
-                        </p>
+                  {column.tasks
+                    .filter((task) =>
+                      task.title
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase()),
+                    )
+                    .filter(
+                      (task) =>
+                        filterPriority === "All" ||
+                        task.priority === filterPriority,
+                    )
+                    .filter(
+                      (task) =>
+                        filterAssignee === "All" ||
+                        (task.assignee || "Guest User") === filterAssignee,
+                    )
+                    .map((task) => (
+                      <div
+                        key={task.id}
+                        className="rounded-xl border border-[#e5e5e5] bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+                      >
+                        {/* Task title + menu */}
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-sm font-medium leading-5">
+                            {task.title}
+                          </p>
 
-                        <div className="relative">
-                          <button
-                            onClick={(e) => {
-                              if (openTaskMenu === task.id) {
-                                setOpenTaskMenu(null);
-                                setTaskMenuPosition(null);
-                                return;
-                              }
-
-                              const rect =
-                                e.currentTarget.getBoundingClientRect();
-
-                              setTaskMenuPosition({
-                                top: rect.bottom + 4,
-                                left: rect.right - 176,
-                              });
-
-                              setOpenTaskMenu(task.id);
-                            }}
-                            className="shrink-0 rounded-md p-1 hover:bg-[#f3f3f3]"
-                          >
-                            <MoreHorizontal size={16} />
-                          </button>
-
-                          {openTaskMenu === task.id && (
-                            <div
-                              className="fixed z-50 w-44 rounded-lg border border-[#e5e5e5] bg-white p-1 shadow-lg"
-                              style={{
-                                top: taskMenuPosition?.top ?? 0,
-                                left: taskMenuPosition?.left ?? 0,
-                              }}
-                            >
-                              <button
-                                onClick={() => {
-                                  setEditingTask(task);
-                                  setNewTaskTitle(task.title);
+                          <div className="relative">
+                            <button
+                              onClick={(e) => {
+                                if (openTaskMenu === task.id) {
                                   setOpenTaskMenu(null);
                                   setTaskMenuPosition(null);
-                                  setShowAddTask(true);
+                                  return;
+                                }
+
+                                const rect =
+                                  e.currentTarget.getBoundingClientRect();
+
+                                const menuHeight = 365;
+                                const spaceBelow =
+                                  window.innerHeight - rect.bottom;
+
+                                setTaskMenuPosition({
+                                  top:
+                                    spaceBelow < menuHeight
+                                      ? Math.max(8, rect.top - menuHeight - 4)
+                                      : rect.bottom + 4,
+                                  left: rect.right - 176,
+                                });
+
+                                setOpenTaskMenu(task.id);
+                              }}
+                              className="shrink-0 rounded-md p-1 hover:bg-[#f3f3f3]"
+                            >
+                              <MoreHorizontal size={16} />
+                            </button>
+
+                            {openTaskMenu === task.id && (
+                              <div
+                                className="fixed z-50 w-44 rounded-lg border border-[#e5e5e5] bg-white p-1 shadow-lg"
+                                style={{
+                                  top: taskMenuPosition?.top ?? 0,
+                                  left: taskMenuPosition?.left ?? 0,
                                 }}
-                                className="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-[#f5f5f5]"
                               >
-                                Edit
-                              </button>
-
-                              <div className="my-1 border-t border-[#eeeeee]" />
-
-                              <p className="px-3 py-1.5 text-[11px] font-medium uppercase tracking-wide text-[#a3a3a3]">
-                                Change status
-                              </p>
-
-                              {(
-                                [
-                                  "To Do",
-                                  "Doing",
-                                  "Completed",
-                                  "On Hold",
-                                  "Backlog",
-                                ] as Task["status"][]
-                              ).map((status) => (
                                 <button
-                                  key={status}
-                                  disabled={task.status === status}
                                   onClick={() => {
-                                    changeTaskStatus(task.id, status);
+                                    setEditingTask(task);
+                                    setNewTaskTitle(task.title);
+                                    setNewTaskPriority(task.priority);
                                     setOpenTaskMenu(null);
                                     setTaskMenuPosition(null);
+                                    setShowAddTask(true);
                                   }}
-                                  className={`w-full rounded-md px-3 py-2 text-left text-sm ${
-                                    task.status === status
-                                      ? "cursor-default text-[#a3a3a3]"
-                                      : "hover:bg-[#f5f5f5]"
-                                  }`}
+                                  className="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-[#f5f5f5]"
                                 >
-                                  {status}
+                                  Edit
                                 </button>
-                              ))}
 
-                              <div className="my-1 border-t border-[#eeeeee]" />
+                                <div className="my-1 border-t border-[#eeeeee]" />
 
-                              <button
-                                onClick={() => deleteTask(task.id)}
-                                disabled={deletingTask === task.id}
-                                className="w-full rounded-md px-3 py-2 text-left text-sm text-red-600 hover:bg-[#fef2f2] disabled:opacity-50"
-                              >
-                                {deletingTask === task.id
-                                  ? "Deleting..."
-                                  : "Delete"}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                                <p className="px-3 py-1.5 text-[11px] font-medium uppercase tracking-wide text-[#a3a3a3]">
+                                  Change status
+                                </p>
 
-                      <div className="mt-4 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-pink-400 via-purple-500 to-blue-400 text-[8px] font-bold text-white">
-                            GU
+                                {(
+                                  [
+                                    "To Do",
+                                    "Doing",
+                                    "Completed",
+                                    "On Hold",
+                                    "Backlog",
+                                  ] as Task["status"][]
+                                ).map((status) => (
+                                  <button
+                                    key={status}
+                                    disabled={task.status === status}
+                                    onClick={() => {
+                                      changeTaskStatus(task.id, status);
+                                      setOpenTaskMenu(null);
+                                      setTaskMenuPosition(null);
+                                    }}
+                                    className={`w-full rounded-md px-3 py-2 text-left text-sm ${
+                                      task.status === status
+                                        ? "cursor-default text-[#a3a3a3]"
+                                        : "hover:bg-[#f5f5f5]"
+                                    }`}
+                                  >
+                                    {status}
+                                  </button>
+                                ))}
+
+                                <div className="my-1 border-t border-[#eeeeee]" />
+
+                                <button
+                                  onClick={() => deleteTask(task.id)}
+                                  disabled={deletingTask === task.id}
+                                  className="w-full rounded-md px-3 py-2 text-left text-sm text-red-600 hover:bg-[#fef2f2] disabled:opacity-50"
+                                >
+                                  {deletingTask === task.id
+                                    ? "Deleting..."
+                                    : "Delete"}
+                                </button>
+                              </div>
+                            )}
                           </div>
-
-                          <span className="text-xs text-[#737373]">
-                            Guest User
-                          </span>
                         </div>
 
-                        {task.dueDate && (
-                          <span className="rounded-full bg-[#fff1f1] px-2.5 py-1 text-[11px] font-medium text-[#ef4444]">
-                            {task.dueDate}
-                          </span>
+                        {/* Optional task fields */}
+                        {visibleFields.priority && (
+                          <div className="mt-2 text-xs text-[#737373]">
+                            Priority: {task.priority}
+                          </div>
+                        )}
+
+                        {visibleFields.status && (
+                          <div className="mt-1 text-xs text-[#737373]">
+                            Status: {task.status}
+                          </div>
+                        )}
+
+                        {visibleFields.reporter && (
+                          <div className="mt-1 text-xs text-[#737373]">
+                            Reporter: {task.reporter || "Guest User"}
+                          </div>
+                        )}
+
+                        {/* Assignee + Due Date */}
+                        {(visibleFields.members ||
+                          (visibleFields.dueDate && task.dueDate)) && (
+                          <div className="mt-4 flex items-center justify-between">
+                            {visibleFields.members && (
+                              <div className="flex items-center gap-2">
+                                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-pink-400 via-purple-500 to-blue-400 text-[8px] font-bold text-white">
+                                  GU
+                                </div>
+
+                                <span className="text-xs text-[#737373]">
+                                  {task.assignee || "Guest User"}
+                                </span>
+                              </div>
+                            )}
+
+                            {visibleFields.dueDate && task.dueDate && (
+                              <span className="rounded-full bg-[#fff1f1] px-2.5 py-1 text-[11px] font-medium text-[#ef4444]">
+                                {task.dueDate}
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
+
+                {/* </div> */}
 
                 {/* Add inside column */}
                 <button
@@ -664,11 +813,30 @@ export default function TasksPage() {
                 className="mt-2 w-full rounded-lg border border-[#d4d4d4] px-3 py-2.5 text-sm outline-none focus:border-[#171717]"
               />
 
+              <div className="mt-5">
+                <label className="text-sm font-medium">Priority</label>
+
+                <select
+                  value={newTaskPriority}
+                  onChange={(e) =>
+                    setNewTaskPriority(e.target.value as Task["priority"])
+                  }
+                  className="mt-2 w-full rounded-lg border border-[#d4d4d4] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#171717]"
+                >
+                  <option value="No Priority">No Priority</option>
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                  <option value="Urgent">Urgent</option>
+                </select>
+              </div>
+
               <div className="mt-6 flex justify-end gap-2">
                 <button
                   onClick={() => {
                     setShowAddTask(false);
                     setNewTaskTitle("");
+                    setNewTaskPriority("No Priority");
                     setEditingTask(null);
                   }}
                   className="rounded-lg px-4 py-2.5 text-sm text-[#525252] hover:bg-[#f5f5f5]"
