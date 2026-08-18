@@ -4,7 +4,10 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+
 import { Task, TaskDocument } from './task.schema';
+import { CreateTaskDto } from './dto/create-task.dto';
+import { UpdateTaskDto } from './dto/update-task.dto';
 
 @Injectable()
 export class TasksService {
@@ -22,19 +25,19 @@ export class TasksService {
   }
 
   // Create a task
-  async create(taskData: Partial<Task>) {
+  async create(taskData: CreateTaskDto) {
     const task = new this.taskModel(taskData);
     return task.save();
   }
 
   // Update a task
-  async update(id: string, taskData: Partial<Task>) {
+  async update(id: string, taskData: UpdateTaskDto) {
     const task = await this.taskModel
       .findByIdAndUpdate(
         id,
         taskData,
         {
-          new: true,
+          returnDocument: 'after',
           runValidators: true,
         },
       )
