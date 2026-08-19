@@ -1,11 +1,62 @@
 import {
   IsArray,
+  IsBoolean,
   IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+
+const priorities = ['No Priority', 'Low', 'Medium', 'High', 'Urgent'] as const;
+
+export class SubtaskDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  title!: string;
+
+  @IsOptional()
+  @IsEnum(priorities)
+  priority?: string;
+
+  @IsOptional()
+  @IsString()
+  projectId?: string;
+
+  @IsOptional()
+  @IsString()
+  assignee?: string;
+
+  @IsOptional()
+  @IsString()
+  dueDate?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  completed?: boolean;
+}
+
+export class TaskCommentDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(2000)
+  text!: string;
+
+  @IsOptional()
+  @IsString()
+  author?: string;
+
+  @IsOptional()
+  @IsString()
+  parentId?: string;
+
+  @IsOptional()
+  @IsString()
+  createdAt?: string;
+}
 
 export class CreateTaskDto {
   @IsString()
@@ -23,7 +74,7 @@ export class CreateTaskDto {
   status?: string;
 
   @IsOptional()
-  @IsEnum(['No Priority', 'Low', 'Medium', 'High', 'Urgent'])
+  @IsEnum(priorities)
   priority?: string;
 
   @IsOptional()
@@ -34,6 +85,32 @@ export class CreateTaskDto {
   @IsArray()
   @IsString({ each: true })
   labels?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  teams?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  resources?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SubtaskDto)
+  subtasks?: SubtaskDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => TaskCommentDto)
+  comments?: TaskCommentDto[];
+
+  @IsOptional()
+  @IsString()
+  projectId?: string;
 
   @IsOptional()
   @IsString()

@@ -24,6 +24,17 @@ export class TasksService {
       .exec();
   }
 
+  // Get one task
+  async findOne(id: string) {
+    const task = await this.taskModel.findById(id).exec();
+
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
+
+    return task;
+  }
+
   // Create a task
   async create(taskData: CreateTaskDto) {
     const task = new this.taskModel(taskData);

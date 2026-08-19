@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import ThemeToggle from "../components/themeToggle";
 
 type Status = "To Do" | "Doing" | "Completed" | "On Hold" | "Backlog";
@@ -30,6 +31,7 @@ interface Task {
   labels?: string[];
   assignee?: string;
   reporter?: string;
+  projectId?: string;
 }
 
 type Column = {
@@ -110,6 +112,7 @@ function normalizeTask(raw: any): Task {
     labels: raw.labels || [],
     assignee: raw.assignee || "Guest User",
     reporter: raw.reporter || "Guest User",
+    projectId: raw.projectId || "task-management",
   };
 }
 
@@ -141,6 +144,7 @@ function priorityClass(priority: Priority) {
 
 export default function TasksPage() {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const router = useRouter();
 
   const [columns, setColumns] = useState<Column[]>(INITIAL_COLUMNS);
   const [loading, setLoading] = useState(true);
@@ -343,6 +347,7 @@ export default function TasksPage() {
           priority: form.priority,
           dueDate: form.dueDate || undefined,
           labels: form.labels,
+          projectId: editingTask?.projectId || "task-management",
           assignee: editingTask?.assignee || "Guest User",
           reporter: editingTask?.reporter || "Guest User",
         }),
@@ -477,7 +482,7 @@ export default function TasksPage() {
     }
 
     const rect = event.currentTarget.getBoundingClientRect();
-    const menuHeight = 370;
+    const menuHeight = 430;
     const menuWidth = 190;
     const gap = 6;
 
@@ -507,6 +512,17 @@ export default function TasksPage() {
           left: taskMenuPosition?.left ?? 0,
         }}
       >
+        <button
+          onClick={() => {
+            setOpenTaskMenu(null);
+            setTaskMenuPosition(null);
+            router.push(`/tasks/${task.id}`);
+          }}
+          className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800"
+        >
+          View task details
+        </button>
+
         <button
           onClick={() => openEditTask(task)}
           className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800"
@@ -555,9 +571,12 @@ export default function TasksPage() {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="break-words text-sm font-semibold leading-5 text-neutral-900 dark:text-neutral-100">
+          <button
+            onClick={() => router.push(`/tasks/${task.id}`)}
+            className="break-words text-left text-sm font-semibold leading-5 text-neutral-900 hover:underline dark:text-neutral-100"
+          >
             {task.title}
-          </h3>
+          </button>
 
           {task.description && (
             <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
@@ -689,9 +708,12 @@ export default function TasksPage() {
                 className="grid gap-3 border-b border-neutral-200 px-5 py-4 last:border-b-0 dark:border-neutral-800 md:grid-cols-[minmax(240px,1.8fr)_120px_150px_150px_130px_70px] md:items-center md:gap-4"
               >
                 <div className="min-w-0">
-                  <p className="break-words text-sm font-medium">
+                  <button
+                    onClick={() => router.push(`/tasks/${task.id}`)}
+                    className="break-words text-left text-sm font-medium hover:underline"
+                  >
                     {task.title}
-                  </p>
+                  </button>
                   {task.description && (
                     <p className="mt-1 line-clamp-1 text-xs text-neutral-500 dark:text-neutral-400">
                       {task.description}

@@ -23,6 +23,11 @@ export class TasksController {
     return this.tasksService.findAll();
   }
 
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.tasksService.findOne(id);
+  }
+
   @Post()
   create(@Body() taskData: CreateTaskDto) {
     return this.tasksService.create(taskData);
