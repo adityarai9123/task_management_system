@@ -25,7 +25,7 @@ The implementation covers the supplied task-management Figma experience, includi
 
 ### Part 2 — Product Understanding
 
-Part 2 is submitted separately as requested by the assessment. It covers the AbleSpace **Take Data** workflow from the **Caseload** tab, with the workflow explained in the candidate's own words and UX/UI or functionality improvements identified.
+Part 2 is submitted separately as requested by the assessment and is included in the `docs/` directory. It covers the AbleSpace **Take Data** workflow from the **Caseload** tab, with the workflow explained in the candidate's own words and UX/UI or functionality improvements identified.
 
 ---
 
@@ -403,9 +403,11 @@ Do not commit real MongoDB credentials, API keys, or other secrets.
 
 ## Deployment
 
-Live URL: `https://task-management-system-tan-three.vercel.app`
+Live URL: https://task-management-system-tan-three.vercel.app
 
-The deployed application should remain publicly accessible for at least 45 days after submission, as required by the assessment.
+The application is deployed and publicly accessible for assessment review.
+The deployment should remain publicly accessible for at least 45 days after submission,
+as required by the assessment.
 
 ---
 
