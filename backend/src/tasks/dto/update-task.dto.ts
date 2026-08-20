@@ -40,6 +40,10 @@ export class UpdateSubtaskDto {
 }
 
 export class UpdateTaskCommentDto {
+  @IsOptional()
+  @IsString()
+  id?: string;
+
   @IsString()
   @IsNotEmpty()
   @MaxLength(2000)
