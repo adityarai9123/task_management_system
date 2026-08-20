@@ -403,7 +403,7 @@ Do not commit real MongoDB credentials, API keys, or other secrets.
 
 ## Deployment
 
-Live URL: `<ADD_DEPLOYED_LIVE_URL_BEFORE_SUBMISSION>`
+Live URL: `https://task-management-system-tan-three.vercel.app`
 
 The deployed application should remain publicly accessible for at least 45 days after submission, as required by the assessment.
 
