@@ -13,6 +13,10 @@ import { Type } from 'class-transformer';
 const priorities = ['No Priority', 'Low', 'Medium', 'High', 'Urgent'] as const;
 
 export class UpdateSubtaskDto {
+  @IsOptional()
+  @IsString()
+  id?: string;
+
   @IsString()
   @IsNotEmpty()
   @MaxLength(200)
